@@ -37,7 +37,7 @@ class BasinHoppingSamplerConfig:
     step_mode: StepMode = "fixed"
     step_size: float = 0.01
     opt_digits: int = -1
-    hash_digits: int = 4
+    hash_digits: int = 5
     bounded: bool = True
     minimizer_method: str = "L-BFGS-B"
     minimizer_options: dict = field(default_factory=lambda: {"ftol": 1e-07, "gtol": 1e-05})

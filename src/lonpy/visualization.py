@@ -349,6 +349,7 @@ class LONVisualizer:
 
         if output_path:
             fig.write_image(str(output_path))
+            fig.write_html(str(output_path) + "_html")
 
         return fig
 
