@@ -62,7 +62,7 @@ def plot_benchmark_surfaces(save_path: str | None = None) -> None:
         )
 
         # Set viewing angle to match paper
-        ax.view_init(elev=15, azim=45)
+        ax.view_init(elev=20, azim=130)
         ax.set_proj_type("ortho")
         # Remove axis labels and ticks for cleaner look
         ax.set_xticklabels([])
@@ -71,7 +71,6 @@ def plot_benchmark_surfaces(save_path: str | None = None) -> None:
 
         # Set subplot label
         ax.set_xlabel(f"({chr(96 + idx)}) {name}", fontsize=12, labelpad=10)
-
     plt.tight_layout()
 
     if save_path:

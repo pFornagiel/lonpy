@@ -13,7 +13,7 @@ from collections.abc import Callable
 
 from benchmark_utils import BENCHMARKS, STEP_SIZES
 
-from lonpy import BasinHoppingSampler, BasinHoppingSamplerConfig, LONVisualizer
+from lonpy import BasinHoppingSampler, BasinHoppingSamplerConfig, LON, LONVisualizer
 
 # Experiment parameters from the paper
 DIM = 5
@@ -45,10 +45,10 @@ def create_lon_for_benchmark(
     def progress(run: int, total: int) -> None:
         print(f"  {name}: Run {run}/{total}", end="\r")
 
-    lon = sampler.sample_to_lon(func, domain, progress_callback=progress)
+    trace_df, raw_records = sampler.sample(func, domain, progress_callback=progress)
     print(f"  {name}: Completed {N_RUNS} runs")
 
-    return lon
+    return trace_df, raw_records
 
 
 def run_experiment(seed: int = 42, save_path: str | None = None) -> dict:
@@ -62,7 +62,15 @@ def run_experiment(seed: int = 42, save_path: str | None = None) -> dict:
         step_size = STEP_MULTIPLIER * STEP_SIZES[DIM][name]
         print(f"Processing {name} (step_size={step_size:.4f}):")
 
-        lon = create_lon_for_benchmark(name, func, bounds, seed=seed)
+        trace_df, raw_records = create_lon_for_benchmark(name, func, bounds, seed=seed)
+        
+        # Save trace data to CSV
+        csv_filename = f"{name.lower()}_trace_data.csv"
+        trace_df.to_csv(csv_filename, index=False)
+        print(f"  Saved trace data to {csv_filename}")
+        
+        # Create LON from trace data
+        lon = LON.from_trace_data(trace_df)
         cmlon = lon.to_cmlon()
 
         lon_metrics = lon.compute_metrics()
