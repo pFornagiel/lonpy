@@ -11,7 +11,13 @@ https://doi.org/10.1145/3319619.3326852
 
 from collections.abc import Callable
 
+import sys
+from pathlib import Path
+
 from benchmark_utils import BENCHMARKS, STEP_SIZES
+
+# Add src to path to import local lonpy
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from lonpy import BasinHoppingSampler, BasinHoppingSamplerConfig, LON, LONVisualizer
 
@@ -36,7 +42,7 @@ def create_lon_for_benchmark(
         n_iterations=N_ITERATIONS,
         step_mode="fixed",
         step_size=step_size,
-        hash_digits=4,
+        hash_digits=5,
         seed=seed,
     )
 

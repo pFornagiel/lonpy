@@ -62,7 +62,7 @@ def plot_benchmark_surfaces(save_path: str | None = None) -> None:
         )
 
         # Set viewing angle to match paper
-        ax.view_init(elev=20, azim=130)
+        ax.view_init(elev=30, azim=130)
         ax.set_proj_type("ortho")
         # Remove axis labels and ticks for cleaner look
         ax.set_xticklabels([])

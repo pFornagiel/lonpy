@@ -48,6 +48,7 @@ def rastrigin(x: np.ndarray) -> float:
     return float(A * n + np.sum(x**2 - A * np.cos(2 * np.pi * x)))
 
 
+# fix birastrigin definition
 def birastrigin(x: np.ndarray) -> float:
     """
     Birastrigin function (Lunacek's bi-Rastrigin).
@@ -58,7 +59,7 @@ def birastrigin(x: np.ndarray) -> float:
         d = 1
         s = 1 - 1/(2*sqrt(n + 20) - 8.2)
         mu_1 = 2.5
-        mu_2 = sqrt(|mu_1^2 - d / s|)
+        mu_2 = -sqrt(|mu_1^2 - d / s|)
     Search domain: [-5.12, 5.12]^n
     """
     n = len(x)
@@ -67,7 +68,7 @@ def birastrigin(x: np.ndarray) -> float:
     d = 1.0
     s = 1.0 - 1.0 / (2.0 * np.sqrt(n + 20.0) - 8.2)
     mu_1 = 2.5
-    mu_2 = np.sqrt(np.abs((mu_1**2 - d) / s))
+    mu_2 = -np.sqrt(np.abs((mu_1**2 - d) / s))
 
     # Rastrigin-like component centered at mu_1
     rastrigin_term = 10.0 * np.sum(1.0 - np.cos(2.0 * np.pi * (x - mu_1)))

@@ -1,6 +1,6 @@
-from lonpy.lon import CMLON, LON
-from lonpy.sampling import BasinHoppingSampler, BasinHoppingSamplerConfig, compute_lon
-from lonpy.visualization import LONVisualizer
+from .lon import CMLON, LON
+from .sampling import BasinHoppingSampler, BasinHoppingSamplerConfig, compute_lon
+from .visualization import LONVisualizer
 
 __version__ = "0.1.0"
 __all__ = [

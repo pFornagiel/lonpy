@@ -5,10 +5,20 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
+from rtree import index
 
-from lonpy.lon import LON
+from .lon import LON
 
 StepMode = Literal["percentage", "fixed"]
+
+def create_dynamic_index(dimension):
+    p = index.Property()
+    p.dimension = dimension
+    p.dat_extension = 'dat'
+    p.idx_extension = 'idx'
+    
+    # Create an in-memory index
+    return index.Index(properties=p)
 
 
 @dataclass
@@ -40,8 +50,9 @@ class BasinHoppingSamplerConfig:
     hash_digits: int = 5
     bounded: bool = True
     minimizer_method: str = "L-BFGS-B"
-    minimizer_options: dict = field(default_factory=lambda: {"ftol": 1e-07, "gtol": 1e-05})
+    minimizer_options: dict = field(default_factory=lambda: {"ftol": 1e-07, "gtol": 0, "maxiter": 15000})
     seed: int | None = None
+    neighborhood_tolerance: float = 1e-5
 
 
 class BasinHoppingSampler:
@@ -60,6 +71,8 @@ class BasinHoppingSampler:
 
     def __init__(self, config: BasinHoppingSamplerConfig | None = None):
         self.config = config or BasinHoppingSamplerConfig()
+        self.rtree = None
+        self.rtree_id = 0
 
     def bounded_perturbation(
         self,
@@ -73,6 +86,25 @@ class BasinHoppingSampler:
 
     def unbounded_perturbation(self, x: np.ndarray, p: np.ndarray) -> np.ndarray:
         return x + np.random.uniform(low=-p, high=p)
+    
+    def check_existing_solution(self, x: np.ndarray, fitness: float) -> bool:
+        if self.rtree is None:
+            raise ValueError("R-tree index is not initialized.")
+        
+        tolerance = self.config.neighborhood_tolerance
+
+        mins = [coord - tolerance for coord in x]
+        maxs = [coord + tolerance for coord in x]
+        query_box = tuple(mins + maxs)
+        hits = list(self.rtree.intersection(query_box, objects=True))
+
+        if not hits:
+            point_coords = tuple(list(x) + list(x))
+            self.rtree.insert(self.rtree_id, point_coords, obj=(x,fitness))
+            self.rtree_id += 1
+            return False, None
+        
+        return True, hits[0].object
 
     def hash_solution(self, x: np.ndarray, fitness: float = 0.0) -> str:  # noqa: ARG002
         """
@@ -92,6 +124,9 @@ class BasinHoppingSampler:
             rounded = x
         else:
             rounded = np.round(x, self.config.hash_digits)
+        
+        # Convert -0.0 to 0.0 to avoid duplicate hashes
+        rounded = rounded + 0.0
 
         hash_str = "_".join(f"{v:.{max(0, self.config.hash_digits)}f}" for v in rounded)
         return hash_str
@@ -112,6 +147,17 @@ class BasinHoppingSampler:
         return int(round(fitness * scale))
 
     def sample(
+            self, 
+            func: Callable[[np.ndarray], float], 
+            domain: list[tuple[float, float]],
+            progress_callback: Callable[[int, int], None] | None = None,
+            ) -> tuple[pd.DataFrame, list[dict]]:
+        
+        self.rtree = create_dynamic_index(len(domain))
+        return self._sample(func, domain, progress_callback)
+        
+
+    def _sample(
         self,
         func: Callable[[np.ndarray], float],
         domain: list[tuple[float, float]],
@@ -175,10 +221,15 @@ class BasinHoppingSampler:
                 current_x = np.copy(res.x)
                 current_f = res.fun
             else:
-                current_x = np.round(res.x, self.config.opt_digits)
-                current_f = np.round(func(current_x), self.config.opt_digits)
+                current_x = np.round(np.copy(res.x), self.config.opt_digits)
+                current_f = np.round(res.fun, self.config.opt_digits)
 
-            for iteration in range(1, self.config.n_iterations + 1):
+            iteration = 0
+            iterations_without_improvement = 0
+            
+            while iterations_without_improvement < self.config.n_iterations:
+                iteration += 1
+                
                 if self.config.bounded:
                     x_perturbed = self.bounded_perturbation(current_x, p, domain)
                     res = minimize(
@@ -201,8 +252,13 @@ class BasinHoppingSampler:
                     new_x = np.copy(res.x)
                     new_f = res.fun
                 else:
-                    new_x = np.round(res.x, self.config.opt_digits)
-                    new_f = np.round(func(new_x), self.config.opt_digits)
+                    new_x = np.round(np.copy(res.x), self.config.opt_digits)
+                    new_f = np.round(res.fun, self.config.opt_digits)
+
+                is_existing_solution, solution = self.check_existing_solution(new_x, new_f)
+
+                if(is_existing_solution):
+                    new_x, new_f = solution
 
                 raw_records.append(
                     {
@@ -235,6 +291,10 @@ class BasinHoppingSampler:
 
                     current_x = new_x.copy()
                     current_f = new_f
+                    if new_f < current_f:
+                        iterations_without_improvement = 0
+                else:
+                    iterations_without_improvement += 1
 
         trace_df = pd.DataFrame(trace_records, columns=["run", "fit1", "node1", "fit2", "node2"])
         return trace_df, raw_records
