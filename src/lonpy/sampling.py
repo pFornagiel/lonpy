@@ -5,11 +5,132 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 from scipy.optimize import minimize
 
 from lonpy.lon import LON, LONConfig
 
 StepMode = Literal["percentage", "fixed"]
+
+
+def _single_bh_run(
+    run: int,
+    func: Callable[[np.ndarray], float],
+    initial_point: np.ndarray,
+    p: np.ndarray,
+    bounds_array: np.ndarray | None,
+    config: "BasinHoppingSamplerConfig",
+    seed: np.random.SeedSequence,
+) -> list[dict]:
+    """Run one independent Basin-Hopping chain and return its raw records.
+
+    This is a module-level function so it is picklable by joblib's
+    ``loky`` (process) backend as well as the ``threading`` backend.
+    Each call gets its own RNG derived from *seed*, so results are
+    fully reproducible and statistically independent across runs.
+
+    Args:
+        run: 1-based run index stored in every record (for bookkeeping).
+        func: Objective function f(x) -> float.
+        initial_point: Starting coordinates for this chain.
+        p: Per-dimension step size array (already computed from config).
+        bounds_array: Array of shape (n_var, 2), or ``None`` when unbounded.
+        config: Sampler configuration shared across all runs (read-only).
+        seed: A child :class:`numpy.random.SeedSequence` for this run.
+            Passed to :func:`numpy.random.default_rng` to produce an
+            independent, reproducible ``Generator``.
+
+    Returns:
+        List of raw record dicts (same schema as
+        :meth:`BasinHoppingSampler._basin_hopping_sampling`).
+    """
+    rng = np.random.default_rng(seed)
+    records: list[dict] = []
+
+    try:
+        res = minimize(
+            func,
+            initial_point,
+            method=config.minimizer_method,
+            options=config.minimizer_options,
+            bounds=bounds_array if config.bounded else None,
+        )
+    except ValueError as e:
+        warnings.warn(
+            f"Run {run}: initial minimize failed with ValueError: {e}. "
+            f"Starting point: {initial_point}. Skipping run.",
+            stacklevel=2,
+        )
+        return records
+
+    current_x = res.x
+    current_f = res.fun
+    iters_without_improvement = 0
+    iter_index = 0
+
+    while True:
+        if config.max_iter is not None and iter_index >= config.max_iter:
+            break
+        if (
+            config.n_iter_no_change is not None
+            and iters_without_improvement >= config.n_iter_no_change
+        ):
+            break
+
+        y = current_x + rng.uniform(low=-p, high=p)
+        x_perturbed = (
+            np.clip(y, bounds_array[:, 0], bounds_array[:, 1])
+            if config.bounded and bounds_array is not None
+            else y
+        )
+
+        try:
+            res = minimize(
+                func,
+                x_perturbed,
+                method=config.minimizer_method,
+                options=config.minimizer_options,
+                bounds=bounds_array if config.bounded else None,
+            )
+        except ValueError as e:
+            warnings.warn(
+                f"Run {run}, iteration {iter_index}: minimize after perturbation "
+                f"failed with ValueError: {e}. "
+                f"Perturbed point: {x_perturbed}. Skipping perturbation.",
+                stacklevel=2,
+            )
+            iters_without_improvement += 1
+            iter_index += 1
+            continue
+
+        new_x = res.x
+        new_f = res.fun
+
+        records.append(
+            {
+                "run": run,
+                "iteration": iter_index,
+                "current_x": current_x.copy(),
+                "current_f": current_f,
+                "new_x": new_x.copy(),
+                "new_f": new_f,
+                "accepted": new_f <= current_f,
+            }
+        )
+
+        if config.n_iter_no_change is not None:
+            if new_f < current_f:
+                iters_without_improvement = 0
+            else:
+                iters_without_improvement += 1
+
+        if new_f <= current_f:
+            current_x = new_x.copy()
+            current_f = new_f
+
+        iter_index += 1
+
+    return records
 
 
 @dataclass
@@ -244,6 +365,90 @@ class BasinHoppingSampler:
                     current_f = new_f
 
                 iter_index += 1
+
+        return raw_records
+
+    def _basin_hopping_sampling_concurrent(
+        self,
+        func: Callable[[np.ndarray], float],
+        domain: list[tuple[float, float]],
+        initial_points: np.ndarray,
+        progress_callback: Callable[[int, int], None] | None = None,
+        n_jobs: int = -1,
+        prefer: Literal["threads", "processes"] = "threads",
+    ) -> list[dict]:
+        """Run Basin-Hopping sampling with runs executed concurrently via joblib.
+
+        Drop-in parallel replacement for :meth:`_basin_hopping_sampling`.
+        Each of the ``config.n_runs`` chains is dispatched as an independent
+        job using :func:`joblib.Parallel`.  The chains share no mutable state:
+        every job gets its own RNG seed derived from a
+        :class:`numpy.random.SeedSequence`, so results are reproducible and
+        statistically independent.
+
+        **Backend choice** (``prefer`` parameter):
+
+        * ``"threads"`` *(default)* — joblib uses a thread pool.  No pickling
+          overhead; ``func`` can be any callable (lambda, closure, …).  scipy
+          and NumPy release the GIL for their C/Fortran kernels, so
+          CPU-bound minimisation still benefits from parallelism.
+        * ``"processes"`` — joblib uses the ``loky`` process pool.  Avoids the
+          GIL entirely, which helps when ``func`` contains significant
+          pure-Python computation.  Requires ``func`` and ``config`` to be
+          picklable (standard functions/dataclasses always are).
+
+        **Progress callback**: because runs execute concurrently, the callback
+        is invoked *after* each run's results are collected (i.e. in
+        completion order, not start order).  It still fires ``n_runs`` times.
+
+        Args:
+            func: Objective function to minimize (f: R^n_var -> R).
+            domain: List of (lower, upper) bounds per dimension.
+            initial_points: Array of shape (config.n_runs, n_var) with
+                initial points for each run.
+            progress_callback: Optional callback(completed, total_runs)
+                called once per completed run. Default: ``None``.
+            n_jobs: Number of parallel jobs. ``-1`` uses all available CPUs.
+                Default: ``-1``.
+            prefer: joblib parallelism backend — ``"threads"`` or
+                ``"processes"``. Default: ``"threads"``.
+
+        Returns:
+            List of raw sampling records (same format as
+            :meth:`_basin_hopping_sampling`).
+        """
+        n_var = len(domain)
+        domain_array = np.array(domain)
+
+        if self.config.step_mode == "percentage":
+            p = self.config.step_size * np.abs(domain_array[:, 1] - domain_array[:, 0])
+        else:
+            p = self.config.step_size * np.ones(n_var)
+
+        bounds_array = domain_array if self.config.bounded else None
+
+        # Spawn one child SeedSequence per run for independent, reproducible RNGs.
+        ss = np.random.SeedSequence(self.config.seed)
+        child_seeds = ss.spawn(self.config.n_runs)
+
+        run_results: list[list[dict]] = Parallel(n_jobs=n_jobs, prefer=prefer)(
+            delayed(_single_bh_run)(
+                run + 1,
+                func,
+                initial_points[run],
+                p,
+                bounds_array,
+                self.config,
+                child_seeds[run],
+            )
+            for run in range(self.config.n_runs)
+        )
+
+        raw_records: list[dict] = []
+        for completed, run_records in enumerate(run_results, start=1):
+            if progress_callback:
+                progress_callback(completed, self.config.n_runs)
+            raw_records.extend(run_records)
 
         return raw_records
 
