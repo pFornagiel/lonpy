@@ -1,0 +1,67 @@
+Section,Function,Config,Nodes,Edges,Accept %,Best Fit,Time (s)
+step_mode,Sphere,1. Fixed (Defaults),1,104,2.9%,0.0000,3.03
+step_mode,Sphere,2. Percentage Steps (Small),1,100,3.0%,0.0000,6.60
+step_mode,Sphere,3. Percentage Steps (Medium),1,88,2.7%,0.0000,5.57
+step_mode,Sphere,4. Percentage Steps (Large),1,85,2.4%,0.0000,6.22
+step_mode,Rosenbrock,1. Fixed (Defaults),16,27,0.9%,0.0000,7.61
+step_mode,Rosenbrock,2. Percentage Steps (Small),12,86,2.2%,0.0000,21.66
+step_mode,Rosenbrock,3. Percentage Steps (Medium),13,85,2.5%,0.0000,23.78
+step_mode,Rosenbrock,4. Percentage Steps (Large),11,70,2.2%,0.0000,27.67
+step_mode,Rastrigin,1. Fixed (Defaults),36,215,6.2%,4.9748,4.55
+step_mode,Rastrigin,2. Percentage Steps (Small),163,421,8.3%,0.9950,15.26
+step_mode,Rastrigin,3. Percentage Steps (Medium),173,197,5.5%,0.0000,10.35
+step_mode,Rastrigin,4. Percentage Steps (Large),145,139,3.8%,0.0000,11.02
+step_mode,Griewank,1. Fixed (Defaults),69,54,1.8%,0.3327,3.92
+step_mode,Griewank,2. Percentage Steps (Small),135,115,3.4%,0.0099,15.83
+step_mode,Griewank,3. Percentage Steps (Medium),128,108,3.1%,0.0000,18.34
+step_mode,Griewank,4. Percentage Steps (Large),104,84,2.6%,0.0099,22.50
+step_mode,Schwefel,1. Fixed (Defaults),17,13,0.5%,-1323.5373,1.47
+step_mode,Schwefel,2. Percentage Steps (Small),262,342,6.3%,-1976.4761,8.24
+step_mode,Schwefel,3. Percentage Steps (Medium),330,310,6.6%,-2094.9144,10.40
+step_mode,Schwefel,4. Percentage Steps (Large),212,192,4.3%,-1976.4761,10.40
+step_mode,Ackley4,1. Fixed (Defaults),57,110,3.3%,16.9743,4.41
+step_mode,Ackley4,2. Percentage Steps (Small),285,284,7.9%,-13.3796,12.27
+step_mode,Ackley4,3. Percentage Steps (Medium),230,212,5.3%,-13.3796,14.23
+step_mode,Ackley4,4. Percentage Steps (Large),178,158,3.9%,-13.3796,15.34
+n_iter_no_change,Sphere,iter-10,1,41,13.1%,0.0000,0.56
+n_iter_no_change,Sphere,iter-25,1,85,8.3%,0.0000,1.75
+n_iter_no_change,Sphere,iter-50,1,83,4.9%,0.0000,2.96
+n_iter_no_change,Sphere,iter-100,1,88,2.7%,0.0000,5.60
+n_iter_no_change,Sphere,iter-250,1,121,1.4%,0.0000,14.75
+n_iter_no_change,Sphere,iter-500,1,140,0.7%,0.0000,33.80
+n_iter_no_change,Sphere,iter-1000,1,135,0.4%,0.0000,63.00
+n_iter_no_change,Rosenbrock,iter-10,18,57,14.8%,0.0000,2.86
+n_iter_no_change,Rosenbrock,iter-25,13,66,7.2%,0.0000,6.54
+n_iter_no_change,Rosenbrock,iter-50,15,68,4.1%,0.0000,11.58
+n_iter_no_change,Rosenbrock,iter-100,13,85,2.5%,0.0000,23.84
+n_iter_no_change,Rosenbrock,iter-250,13,110,1.2%,0.0000,61.47
+n_iter_no_change,Rosenbrock,iter-500,13,118,0.7%,0.0000,112.73
+n_iter_no_change,Rosenbrock,iter-1000,17,142,0.4%,0.0000,235.11
+n_iter_no_change,Rastrigin,iter-10,122,109,21.6%,0.9950,1.53
+n_iter_no_change,Rastrigin,iter-25,177,182,14.3%,0.9950,3.71
+n_iter_no_change,Rastrigin,iter-50,157,167,7.5%,0.0000,6.37
+n_iter_no_change,Rastrigin,iter-100,173,197,5.5%,0.0000,10.30
+n_iter_no_change,Rastrigin,iter-250,158,217,2.2%,0.0000,27.75
+n_iter_no_change,Rastrigin,iter-500,163,247,1.3%,0.0000,53.84
+n_iter_no_change,Rastrigin,iter-1000,186,275,0.7%,0.0000,103.80
+n_iter_no_change,Griewank,iter-10,84,66,15.2%,0.0172,2.52
+n_iter_no_change,Griewank,iter-25,84,65,7.5%,0.0197,4.81
+n_iter_no_change,Griewank,iter-50,95,75,4.4%,0.0148,8.88
+n_iter_no_change,Griewank,iter-100,128,108,3.1%,0.0000,18.15
+n_iter_no_change,Griewank,iter-250,152,132,1.4%,0.0000,48.87
+n_iter_no_change,Griewank,iter-500,150,130,0.7%,0.0000,92.86
+n_iter_no_change,Griewank,iter-1000,174,154,0.4%,0.0000,189.96
+n_iter_no_change,Schwefel,iter-10,197,177,25.8%,-1976.4761,1.69
+n_iter_no_change,Schwefel,iter-25,278,258,16.7%,-1976.4761,3.48
+n_iter_no_change,Schwefel,iter-50,314,294,11.0%,-2094.9144,5.91
+n_iter_no_change,Schwefel,iter-100,330,310,6.6%,-2094.9144,10.30
+n_iter_no_change,Schwefel,iter-250,376,356,3.4%,-1976.4761,22.81
+n_iter_no_change,Schwefel,iter-500,442,422,2.0%,-2094.9144,45.36
+n_iter_no_change,Schwefel,iter-1000,471,451,1.0%,-2094.9144,92.57
+n_iter_no_change,Ackley4,iter-10,198,178,26.8%,-12.4201,2.46
+n_iter_no_change,Ackley4,iter-25,230,211,15.2%,-13.3796,4.98
+n_iter_no_change,Ackley4,iter-50,210,191,9.7%,-13.3796,7.04
+n_iter_no_change,Ackley4,iter-100,230,212,5.3%,-13.3796,14.14
+n_iter_no_change,Ackley4,iter-250,271,261,2.8%,-13.3796,32.06
+n_iter_no_change,Ackley4,iter-500,291,282,1.7%,-13.3796,57.84
+n_iter_no_change,Ackley4,iter-1000,261,262,0.7%,-13.3796,123.71
